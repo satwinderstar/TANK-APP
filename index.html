@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pa">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HD Water Tank - Daily Report</title>
+\1  <!-- PWA Integration -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0077cc">
+  <link rel="icon" href="icon-192.png">
+
+  <style>
+    :root{--bg1:#cce7ff;--bg2:#99c2ff}
+    *{box-sizing:border-box}
+    body{
+      margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      background: radial-gradient(circle at top, var(--bg1), var(--bg2));
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;padding:12px;
+    }
+    .top-info{width:100%;max-width:1200px;background: rgba(0,0,0,0.86);color:#fff;padding:10px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(0,0,0,0.25);margin-bottom:14px;flex-wrap:wrap;font-size:14px;}
+    .top-left,.top-right{display:flex;gap:12px;align-items:center}
+    .pill{background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:8px;color:#cfe;font-weight:600}
+    .label{color:#9fe;text-transform:uppercase;font-size:11px;letter-spacing:0.08em}
+    .main{width:100%;max-width:1200px;display:flex;gap:20px;align-items:flex-start;justify-content:space-between;}
+    .tank-section{flex: 0 0 400px;display:flex;flex-direction:column;align-items:center;gap:15px;}
+    .glass-tank{width:100%;height:500px;border-radius:22px;border:6px solid rgba(255,255,255,0.85);background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));box-shadow: inset 0 18px 40px rgba(255,255,255,0.25), inset 0 -18px 40px rgba(0,0,0,0.12), 0 28px 60px rgba(0,0,0,0.35);position:relative;overflow:hidden;backdrop-filter: blur(6px) saturate(1.1);}
+    .glass-tank::after{content:'';position:absolute;left:-20%;top:-30%;width:60%;height:60%;background: linear-gradient(135deg, rgba(255,255,255,0.35), rgba(255,255,255,0.04));transform:rotate(-18deg);filter: blur(14px);pointer-events:none;}
+    .water{position:absolute;left:0;bottom:0;width:100%;height: var(--water-level, 0%);background: linear-gradient(180deg,#00ccff,#0066ff);transition: height 1.2s cubic-bezier(.2,.9,.2,1), background 0.9s ease;box-shadow: inset 0 8px 40px rgba(0,0,0,0.25);overflow:hidden;}
+    .water::before,.water::after{content:"";position:absolute;left:-40%;width:220%;height:50px;top:0;background: radial-gradient(closest-side, rgba(255,255,255,0.18), rgba(255,255,255,0.02));opacity:0.45;transform:translateY(-6px);border-radius:50%;animation:waveX 4.8s linear infinite;mix-blend-mode:screen;pointer-events:none;}
+    .water::after{ top:12px; opacity:0.22; animation-duration:6.2s; filter: blur(6px) }
+    @keyframes waveX{0% { transform: translateX(0) translateY(-6px) }50%{ transform: translateX(25px) translateY(-2px) }100%{ transform: translateX(0) translateY(-6px) }}
+    .internal-percentage{position:absolute;top:18%;left:50%;transform:translateX(-50%);background: rgba(0,0,0,0.45);color:#fff;padding:12px 18px;border-radius:10px;font-size:36px;font-weight:700;text-shadow: 0 2px 8px rgba(0,0,0,0.6);z-index:8;min-width:140px;text-align:center;}
+    .last-time{position:absolute;top:34%;left:50%;transform:translateX(-50%);background: rgba(0,0,0,0.42);color: #ffea70;padding:8px 12px;border-radius:8px;font-size:15px;font-weight:700;z-index:8;}
+    .scale{position:absolute;left:-64px;top:12px;bottom:12px;width:52px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-weight:700;color:#111;pointer-events:none;}
+    .motor-status{font-family:monospace;background:rgba(0,0,0,0.9);color:lime;padding:12px 18px;border-radius:10px;margin-top:10px;box-shadow:0 8px 20px rgba(0,0,0,0.18);font-size:16px;font-weight:700;text-align:center;min-width:200px;transition: all 0.3s ease;}
+    .motor-on{color:#00ff00;background:rgba(0,100,0,0.2);border:2px solid #00ff00;animation: motorPulse 1.5s infinite;}
+    .motor-off{color:#ff4444;background:rgba(100,0,0,0.2);border:2px solid #ff4444;}
+    .motor-checking{color:#ffaa00;background:rgba(100,60,0,0.2);border:2px solid #ffaa00;}
+    @keyframes motorPulse{0%, 100% { box-shadow: 0 0 10px rgba(0,255,0,0.3); }50% { box-shadow: 0 0 20px rgba(0,255,0,0.6); }}
+    .daily-report{flex: 1;background: #ffffff;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,0.14);overflow:hidden;max-height:600px;}
+    .daily-report h3{margin:0;padding:12px 16px;background:linear-gradient(90deg,#0077cc,#004f9e);color:#fff;font-size:18px;font-weight:700;}
+    .report-content{padding:16px;max-height:520px;overflow-y:auto;}
+    .activity-period{background:rgba(0,119,204,0.08);border-left:4px solid #0077cc;padding:12px 16px;margin-bottom:12px;border-radius:0 8px 8px 0;}
+    .period-header{font-weight:700;color:#0077cc;font-size:16px;margin-bottom:6px;}
+    .period-details{font-size:14px;color:#444;line-height:1.4;margin-bottom:8px;}
+    .water-level-info{background:rgba(0,150,255,0.1);border:1px solid #0096ff;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:14px;color:#0066cc;}
+    .level-change{font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;}
+    .level-increase{background:#d4edda;color:#155724;}
+    .level-decrease{background:#f8d7da;color:#721c24;}
+    .level-stable{background:#e2e3e5;color:#383d41;}
+    .period-stats{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;}
+    .stat-item{background:#f0f8ff;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600;color:#0066cc;}
+    .loading-msg{text-align:center;padding:20px;color:#666;font-style:italic;}
+    .summary-box{background:linear-gradient(135deg,#e8f4f8,#d1e7dd);padding:12px 16px;border-radius:8px;margin-bottom:16px;border:2px solid #0077cc;}
+    .summary-title{font-weight:700;color:#0077cc;font-size:16px;margin-bottom:8px;}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;}
+    .summary-item{background:rgba(255,255,255,0.7);padding:6px 10px;border-radius:6px;}
+    .controls{display:flex;gap:8px;align-items:center}
+    .input{background:rgba(255,255,255,0.95);border-radius:6px;padding:6px 8px;border:1px solid #ccc;font-weight:700}
+    .btn{background:#0077cc;color:#fff;padding:8px 10px;border-radius:6px;border:none;cursor:pointer;font-weight:700}
+    .btn:active{transform:translateY(1px)}
+    @media (max-width:900px){.main{flex-direction:column;align-items:center}.tank-section{flex:none;width:90vw;max-width:400px}.daily-report{width:100%;margin-top:16px}.period-stats{gap:8px}.stat-item{font-size:12px;padding:3px 8px}}
+  </style>
+</head>
+<body>
+
+  <!-- TOP INFO BAR -->
+  <div class="top-info">
+    <div class="top-left">
+      <div class="pill"><span class="label">Channel</span> <div id="chId" style="margin-left:8px">—</div></div>
+      <div class="pill"><span class="label">API Key</span> <div id="apiKey" style="margin-left:8px">N/A</div></div>
+      <div class="pill"><span class="label">Today Total</span> <div id="todayTotal" style="margin-left:8px">0</div></div>
+    </div>
+
+    <div class="top-right">
+      <div class="pill"><span class="label">Last Result</span> <div id="resultTime" style="margin-left:8px">--</div></div>
+      <div class="pill"><span class="label">Connection</span> <div id="connectionStatus" style="margin-left:8px">CHECKING</div></div>
+    </div>
+  </div>
+
+  <!-- CONFIG / CONTROLS -->
+  <div style="width:100%;max-width:1200px;margin-bottom:12px;display:flex;justify-content:flex-end;">
+    <div class="controls" aria-hidden>
+      <input id="inputChannel" class="input" placeholder="Channel ID (e.g. 2949851)" />
+      <input id="inputApiKey" class="input" placeholder="Read API Key (optional)" />
+      <button id="btnApply" class="btn">Apply</button>
+      <button id="btnRefresh" class="btn" title="Refresh now" style="background:#28a745">Refresh</button>
+    </div>
+  </div>
+
+  <!-- MAIN: Tank + Daily Report -->
+  <div class="main">
+
+    <!-- TANK SECTION -->
+    <div class="tank-section">
+      <div class="glass-tank" role="img" aria-label="Glass Water Tank">
+        <div class="scale" aria-hidden>
+          <div class="tick">100%</div><div class="tick">90%</div><div class="tick">80%</div><div class="tick">70%</div><div class="tick">60%</div><div class="tick">50%</div><div class="tick">40%</div><div class="tick">30%</div><div class="tick">20%</div><div class="tick">10%</div><div class="tick">0%</div>
+        </div>
+
+        <div class="water" id="waterFill" style="--water-level:0%"></div>
+        <div class="internal-percentage" id="internalPercentage">0%</div>
+        <div class="last-time" id="lastTime">--:--:--</div>
+      </div>
+
+      <div id="motorStatus" class="motor-status motor-checking">CHECKING MOTOR...</div>
+    </div>
+
+    <!-- DAILY REPORT SECTION -->
+    <div class="daily-report">
+      <h3>ਅੱਜ ਦੀ ਰਿਪੋਰਟ</h3>
+      <div class="report-content" id="reportContent">
+        <div class="loading-msg">ਡੇਟਾ ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /*************************************************************************
+     * GitHub Pages ready ThingSpeak dashboard
+     * - Reads channel & apikey from inputs OR URL params (?channel=...&apikey=...)
+     * - Keeps original visuals + Punjabi UI
+     * - Save as index.html and push to GitHub Pages
+     *
+     * Source: converted from user's uploaded file. 1
+     *************************************************************************/
+
+    // DEFAULTS (you can change in UI)
+    let channelId = "";
+    let readApiKey = "";
+
+    // Elements
+    const chEl = document.getElementById('chId');
+    const keyEl = document.getElementById('apiKey');
+    const todayEl = document.getElementById('todayTotal');
+    const resultEl = document.getElementById('resultTime');
+    const connEl = document.getElementById('connectionStatus');
+    const waterElem = document.getElementById('waterFill');
+    const intPct = document.getElementById('internalPercentage');
+    const lastTimeEl = document.getElementById('lastTime');
+    const motorEl = document.getElementById('motorStatus');
+    const reportContent = document.getElementById('reportContent');
+
+    // Controls
+    const inputChannel = document.getElementById('inputChannel');
+    const inputApiKey = document.getElementById('inputApiKey');
+    const btnApply = document.getElementById('btnApply');
+    const btnRefresh = document.getElementById('btnRefresh');
+
+    // Read URL params if present
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('channel')) channelId = urlParams.get('channel');
+    if (urlParams.get('apikey')) readApiKey = urlParams.get('apikey');
+
+    // Prefill inputs
+    if (channelId) inputChannel.value = channelId;
+    if (readApiKey) inputApiKey.value = readApiKey;
+
+    // Apply button
+    btnApply.addEventListener('click', () => {
+      channelId = inputChannel.value.trim();
+      readApiKey = inputApiKey.value.trim();
+      saveAndApply();
+      fetchLatest(); // immediate
+    });
+
+    btnRefresh.addEventListener('click', () => {
+      fetchLatest();
+    });
+
+    function saveAndApply(){
+      chEl.textContent = channelId || '—';
+      keyEl.textContent = readApiKey || 'N/A';
+      // store locally so next visit remembers (optional)
+      try {
+        if (channelId) localStorage.setItem('ts_channel', channelId);
+        else localStorage.removeItem('ts_channel');
+        if (readApiKey) localStorage.setItem('ts_apikey', readApiKey);
+        else localStorage.removeItem('ts_apikey');
+      } catch(e){ /* ignore storage errors */ }
+    }
+
+    // restore from localStorage if not provided by URL / input
+    try {
+      if (!channelId && localStorage.getItem('ts_channel')) {
+        channelId = localStorage.getItem('ts_channel');
+        inputChannel.value = channelId;
+      }
+      if (!readApiKey && localStorage.getItem('ts_apikey')) {
+        readApiKey = localStorage.getItem('ts_apikey');
+        inputApiKey.value = readApiKey;
+      }
+    } catch(e){ /* ignore */ }
+
+    // initial apply
+    saveAndApply();
+
+    // ===== Motor detection + helpers (kept from original) =====
+    let previousWaterLevel = null;
+    let motorCheckHistory = [];
+    const MOTOR_SENSITIVITY = 0.5;
+
+    function getWaterGradient(level){
+      if (level >= 90) return "linear-gradient(180deg, #8a2be2 0%, #4b0082 20%, #0000ff 45%, #00bfff 65%, #00ff7f 80%, #ffd700 90%, #ff4500 100%)";
+      if (level >= 75) return "linear-gradient(180deg, #4b0082 0%, #0000ff 30%, #00bfff 55%, #00ff7f 75%, #ffd700 90%)";
+      if (level >= 60) return "linear-gradient(180deg, #0000ff 0%, #00bfff 40%, #00ff7f 65%, #ffd700 90%)";
+      if (level >= 45) return "linear-gradient(180deg, #00bfff 0%, #00ff7f 40%, #ffd700 65%, #ff8c00 90%)";
+      if (level >= 30) return "linear-gradient(180deg, #00ff7f 0%, #ffd700 45%, #ff8c00 75%, #ff4500 95%)";
+      if (level >= 15) return "linear-gradient(180deg, #ffd700 0%, #ff8c00 50%, #ff4500 100%)";
+      return "linear-gradient(180deg, #ff4500 0%, #8b0000 100%)";
+    }
+
+    function checkConnectionStatus(recordTime){
+      const now = new Date();
+      const diffSeconds = (now - recordTime) / 1000;
+      return diffSeconds <= 45 ? "ONLINE" : "OFFLINE";
+    }
+
+    function detectMotorStatus(currentLevel){
+      if (previousWaterLevel === null) {
+        previousWaterLevel = currentLevel;
+        motorEl.textContent = "MOTOR CHECKING...";
+        motorEl.className = "motor-status motor-checking";
+        return;
+      }
+      const levelChange = currentLevel - previousWaterLevel;
+      motorCheckHistory.push(levelChange);
+      if (motorCheckHistory.length > 5) motorCheckHistory.shift();
+      const avgTrend = motorCheckHistory.reduce((a,b) => a+b, 0) / motorCheckHistory.length;
+      if (avgTrend > MOTOR_SENSITIVITY) {
+        motorEl.textContent = "MOTOR ON";
+        motorEl.className = "motor-status motor-on";
+      } else if (avgTrend < -MOTOR_SENSITIVITY) {
+        motorEl.textContent = "MOTOR OFF (Usage)";
+        motorEl.className = "motor-status motor-off";
+      } else {
+        motorEl.textContent = "MOTOR OFF";
+        motorEl.className = "motor-status motor-off";
+      }
+      previousWaterLevel = currentLevel;
+    }
+
+    // water level calculation (same logic)
+    function calculateWaterLevel(field1Value){
+      const empty = parseFloat(field1Value);
+      return Math.max(0, Math.min(100, 100 - (isNaN(empty) ? 0 : empty)));
+    }
+
+    // daily activity analysis (kept)
+    function analyzeDailyActivity(feeds){
+      if (!feeds || feeds.length === 0) return null;
+      const feedsWithLevels = feeds.map(feed => ({...feed, waterLevel: calculateWaterLevel(feed.field1)})).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+      const activityPeriods = [];
+      let currentPeriod = null;
+      const GAP_THRESHOLD = 10 * 60 * 1000;
+      feedsWithLevels.forEach((feed) => {
+        const feedTime = new Date(feed.created_at);
+        if (!currentPeriod) {
+          currentPeriod = { startTime: feedTime, endTime: feedTime, entries: [feed], count: 1, startLevel: feed.waterLevel, endLevel: feed.waterLevel, minLevel: feed.waterLevel, maxLevel: feed.waterLevel };
+        } else {
+          const timeDiff = feedTime - currentPeriod.endTime;
+          if (timeDiff <= GAP_THRESHOLD) {
+            currentPeriod.endTime = feedTime;
+            currentPeriod.entries.push(feed);
+            currentPeriod.count++;
+            currentPeriod.endLevel = feed.waterLevel;
+            currentPeriod.minLevel = Math.min(currentPeriod.minLevel, feed.waterLevel);
+            currentPeriod.maxLevel = Math.max(currentPeriod.maxLevel, feed.waterLevel);
+          } else {
+            activityPeriods.push(currentPeriod);
+            currentPeriod = { startTime: feedTime, endTime: feedTime, entries: [feed], count: 1, startLevel: feed.waterLevel, endLevel: feed.waterLevel, minLevel: feed.waterLevel, maxLevel: feed.waterLevel };
+          }
+        }
+      });
+      if (currentPeriod) activityPeriods.push(currentPeriod);
+      return { totalEntries: feeds.length, totalPeriods: activityPeriods.length, periods: activityPeriods, firstEntry: feedsWithLevels[0].created_at, lastEntry: feedsWithLevels[feedsWithLevels.length - 1].created_at, overallStartLevel: feedsWithLevels[0].waterLevel, overallEndLevel: feedsWithLevels[feedsWithLevels.length - 1].waterLevel };
+    }
+
+    function formatTime(dateStr){
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
+    }
+    function formatDuration(startTime, endTime){
+      const diff = new Date(endTime) - new Date(startTime);
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      if (minutes > 0) return `${minutes}m ${seconds}s`; else return `${seconds}s`;
+    }
+    function getLevelChangeClass(startLevel, endLevel){
+      const diff = endLevel - startLevel;
+      if (Math.abs(diff) < 1) return 'level-stable';
+      return diff > 0 ? 'level-increase' : 'level-decrease';
+    }
+    function getLevelChangeText(startLevel, endLevel){
+      const diff = endLevel - startLevel;
+      if (Math.abs(diff) < 1) return 'Stable';
+      const changeAmount = Math.abs(diff).toFixed(1);
+      return diff > 0 ? `+${changeAmount}%` : `-${changeAmount}%`;
+    }
+
+    function generateDailyReport(activityData){
+      if (!activityData) {
+        reportContent.innerHTML = '<div class="loading-msg">ਅੱਜ ਕੋਈ ਐਂਟਰੀ ਨਹੀਂ ਮਿਲੀ</div>';
+        return;
+      }
+      let html = '';
+      const overallChangeClass = getLevelChangeClass(activityData.overallStartLevel, activityData.overallEndLevel);
+      const overallChangeText = getLevelChangeText(activityData.overallStartLevel, activityData.overallEndLevel);
+      html += `
+        <div class="summary-box">
+          <div class="summary-title">ਅੱਜ ਦਾ ਸਾਰਾਂਸ਼</div>
+          <div class="summary-grid">
+            <div class="summary-item"><strong>ਕੁੱਲ ਐਂਟਰੀਆਂ:</strong> ${activityData.totalEntries}</div>
+            <div class="summary-item"><strong>ਸਰਗਰਮ ਪੀਰੀਅਡ:</strong> ${activityData.totalPeriods}</div>
+            <div class="summary-item"><strong>ਪਹਿਲੀ ਐਂਟਰੀ:</strong> ${formatTime(activityData.firstEntry)}</div>
+            <div class="summary-item"><strong>ਆਖਰੀ ਐਂਟਰੀ:</strong> ${formatTime(activityData.lastEntry)}</div>
+          </div>
+          <div class="water-level-info">
+            <strong>ਸਮੁਚਾ ਪਾਣੀ ਬਦਲਾਵ:</strong> ${activityData.overallStartLevel.toFixed(1)}% → ${activityData.overallEndLevel.toFixed(1)}%
+            <span class="level-change ${overallChangeClass}">${overallChangeText}</span>
+          </div>
+        </div>
+      `;
+      activityData.periods.forEach((period, index) => {
+        const duration = formatDuration(period.startTime, period.endTime);
+        const avgInterval = period.count > 1 ? Math.round((new Date(period.endTime) - new Date(period.startTime)) / (period.count - 1) / 1000) : 0;
+        const levelChangeClass = getLevelChangeClass(period.startLevel, period.endLevel);
+        const levelChangeText = getLevelChangeText(period.startLevel, period.endLevel);
+        html += `
+          <div class="activity-period">
+            <div class="period-header">Period ${index + 1}: ${formatTime(period.startTime)} - ${formatTime(period.endTime)}</div>
+            <div class="period-details">ਇਸ ਪੀਰੀਅਡ ਵਿੱਚ ${period.count} ਲਗਾਤਾਰ ਐਂਟਰੀਆਂ ਹੋਈਆਂ।</div>
+            <div class="water-level-info">
+              <strong>ਪਾਣੀ ਦਾ ਪੱਧਰ:</strong> ${period.startLevel.toFixed(1)}% → ${period.endLevel.toFixed(1)}%
+              <span class="level-change ${levelChangeClass}">${levelChangeText}</span><br>
+              <strong>ਰੇਂਜ:</strong> ${period.minLevel.toFixed(1)}% ਤੋਂ ${period.maxLevel.toFixed(1)}% ਤੱਕ
+            </div>
+            <div class="period-stats">
+              <div class="stat-item">ਐਂਟਰੀਆਂ: ${period.count}</div>
+              <div class="stat-item">ਮਿਆਦ: ${duration}</div>
+              ${avgInterval > 0 ? `<div class="stat-item">Avg Gap: ${avgInterval}s</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      reportContent.innerHTML = html;
+    }
+
+    // ===== Fetch functions (ThingSpeak) =====
+    async function fetchTodayTotal(){
+      if (!channelId) return;
+      try {
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        const start = `${dateStr} 00:00:00`;
+        const end = `${dateStr} 23:59:59`;
+        const url = `https://api.thingspeak.com/channels/${encodeURIComponent(channelId)}/feeds.json?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}${readApiKey ? '&api_key='+encodeURIComponent(readApiKey) : ''}`;
+        const resp = await fetch(url, {cache:"no-store"});
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const json = await resp.json();
+        const totalCount = (json && Array.isArray(json.feeds)) ? json.feeds.length : 0;
+        todayEl.textContent = String(totalCount);
+        const activityData = analyzeDailyActivity(json.feeds);
+        generateDailyReport(activityData);
+      } catch(err){
+        console.error('fetchTodayTotal error:', err);
+        todayEl.textContent = "ERR";
+        reportContent.innerHTML = '<div class="loading-msg">ਡੇਟਾ ਲੋਡ ਕਰਨ ਵਿੱਚ ਸਮੱਸਿਆ</div>';
+      }
+    }
+
+    async function fetchLatest(){
+      if (!channelId) {
+        connEl.textContent = "NO CHANNEL";
+        connEl.style.color = "#ff4444";
+        reportContent.innerHTML = '<div class="loading-msg">ਕਿਰਪਾ ਕਰਕੇ Channel ID ਭਰੋ ਅਤੇ Apply ਕਰੋ</div>';
+        return;
+      }
+      try {
+        const url = `https://api.thingspeak.com/channels/${encodeURIComponent(channelId)}/feeds/last.json${readApiKey ? '?api_key='+encodeURIComponent(readApiKey) : ''}`;
+        const resp = await fetch(url, {cache:"no-store"});
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+        if (data && data.created_at){
+          const waterLevel = calculateWaterLevel(data.field1);
+          waterElem.style.height = waterLevel.toFixed(1) + "%";
+          waterElem.style.background = getWaterGradient(waterLevel);
+          waterElem.style.setProperty('--water-level', waterLevel.toFixed(1) + "%");
+          intPct.textContent = waterLevel.toFixed(1) + "%";
+          const ts = new Date(data.created_at);
+          lastTimeEl.textContent = ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
+          resultEl.textContent = ts.toLocaleString('en-US', { hour12: true });
+          const connStatus = checkConnectionStatus(ts);
+          connEl.textContent = connStatus;
+          connEl.style.color = (connStatus === "ONLINE" ? "#00ff00" : "#ff4444");
+          detectMotorStatus(waterLevel);
+          await fetchTodayTotal();
+        } else {
+          throw new Error("No data received");
+        }
+      } catch(err){
+        console.error("fetchLatest error:", err);
+        connEl.textContent = "ERROR";
+        connEl.style.color = "#ff4444";
+        motorEl.textContent = "CONNECTION ERROR";
+        motorEl.className = "motor-status motor-off";
+        reportContent.innerHTML = '<div class="loading-msg">ਕੁਝ ਗਲਤ ਹੋ ਗਿਆ — ਚੈੱਕ ਕਰੋ Channel ID / API Key</div>';
+      }
+    }
+
+    // Polling interval
+    let pollInterval = null;
+    function startPolling(){
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(fetchLatest, 15000);
+    }
+
+    // initial fetch if channel present
+    fetchLatest();
+    startPolling();
+
+    // apply saved settings to UI label whenever storage or url changes
+    // keep UI in sync
+    setInterval(saveAndApply, 2500);
+
+    // double-click motor status to force refresh (nice utility)
+    motorEl.addEventListener('dblclick', () => fetchLatest());
+
+    // expose for debugging (optional)
+    window.__TS = { fetchLatest, fetchTodayTotal, setChannel: (c) => { channelId=c; inputChannel.value=c; saveAndApply(); } };
+
+  </script>
+
+  <!-- PWA service worker register -->
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("./service-worker.js");
+    });
+  }
+  </script>
+
+</body>
+</html>
